@@ -1,94 +1,136 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth';
-import { doc, setDoc, getDoc, getFirestore } from 'firebase/firestore';
-import { auth } from './firebase';
-
-interface User {
-  uid: string;
-  email: string | null;
-  username: string;
-  avatar: string | null;
-}
+import { Session } from '@supabase/supabase-js';
+import { User } from './supabase';
 
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
+  loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [supabase, setSupabase] = useState<any>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      if (fbUser) {
-        const db = getFirestore();
-        const userDoc = await getDoc(doc(db, 'users', fbUser.uid));
-        if (userDoc.exists()) {
-          setUser(userDoc.data() as User);
-        } else {
-          setUser({
-            uid: fbUser.uid,
-            email: fbUser.email,
-            username: fbUser.displayName || 'User',
-            avatar: fbUser.photoURL,
-          });
-        }
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
+    const initSupabase = async () => {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      
+      if (supabaseUrl && supabaseKey) {
+        const client = createClient(supabaseUrl, supabaseKey);
+        setSupabase(client);
 
-    return () => unsubscribe();
+        const { data: { session } } = await client.auth.getSession();
+        setSession(session);
+        
+        if (session?.user) {
+          await fetchUserProfile(client, session.user.id);
+        }
+        setLoading(false);
+
+        client.auth.onAuthStateChange(async (event, session) => {
+          setSession(session);
+          if (session?.user) {
+            await fetchUserProfile(client, session.user.id);
+          } else {
+            setUser(null);
+          }
+          setLoading(false);
+        });
+      } else {
+        setLoading(false);
+      }
+    };
+
+    initSupabase();
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const db = getFirestore();
-    const result = await signInWithEmailAndPassword(auth, email, password);
-    const userDoc = await getDoc(doc(db, 'users', result.user.uid));
-    if (userDoc.exists()) {
-      setUser(userDoc.data() as User);
+  const fetchUserProfile = async (client: any, userId: string) => {
+    const { data, error } = await client
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (data && !error) {
+      setUser(data);
     } else {
-      setUser({
-        uid: result.user.uid,
-        email: result.user.email,
-        username: result.user.displayName || 'User',
-        avatar: result.user.photoURL,
-      });
+      const { data: authUser } = await client.auth.getUser();
+      if (authUser?.user) {
+        const newUser = {
+          id: authUser.user.id,
+          email: authUser.user.email || '',
+          username: authUser.user.user_metadata?.username || 'User',
+          avatar_url: null,
+          is_online: true,
+          last_seen: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+        };
+        
+        await client.from('users').insert(newUser);
+        setUser(newUser);
+      }
     }
   };
 
+  const login = async (email: string, password: string) => {
+    if (!supabase) throw new Error('Not initialized');
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+  };
+
   const register = async (email: string, username: string, password: string) => {
-    const db = getFirestore();
-    const result = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(result.user, { displayName: username });
+    if (!supabase) throw new Error('Not initialized');
     
-    const userData: User = {
-      uid: result.user.uid,
-      email: result.user.email,
-      username,
-      avatar: null,
-    };
+    const { data, error } = await supabase.auth.signUp({ 
+      email, 
+      password,
+      options: {
+        data: { username }
+      }
+    });
     
-    await setDoc(doc(db, 'users', result.user.uid), userData);
-    setUser(userData);
+    if (error) throw error;
+    
+    if (data.user) {
+      const newUser = {
+        id: data.user.id,
+        email,
+        username,
+        avatar_url: null,
+        is_online: true,
+        last_seen: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+      };
+      
+      await supabase.from('users').insert(newUser);
+    }
   };
 
   const logout = async () => {
-    await signOut(auth);
-    setUser(null);
+    if (!supabase) return;
+    if (user) {
+      await supabase
+        .from('users')
+        .update({ is_online: false, last_seen: new Date().toISOString() })
+        .eq('id', user.id);
+    }
+    await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, session, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
