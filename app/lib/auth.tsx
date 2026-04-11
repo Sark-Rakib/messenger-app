@@ -1,78 +1,85 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { User as FirebaseUser } from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { auth, db } from './firebase';
 
 interface User {
-  id: string;
-  email: string;
+  uid: string;
+  email: string | null;
   username: string;
   avatar: string | null;
 }
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
+  firebaseUser: FirebaseUser | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, username: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function getInitialAuth() {
-  if (typeof window === 'undefined') return { user: null, token: null };
-  const savedToken = localStorage.getItem('token');
-  const savedUser = localStorage.getItem('user');
-  if (savedToken && savedUser) {
-    return { user: JSON.parse(savedUser), token: savedToken };
-  }
-  return { user: null, token: null };
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const initialAuth = getInitialAuth();
-  const [user, setUser] = useState<User | null>(initialAuth.user);
-  const [token, setToken] = useState<string | null>(initialAuth.token);
-  const loading = false;
+  const [user, setUser] = useState<User | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (fbUser) => {
+      if (fbUser) {
+        setFirebaseUser(fbUser);
+        const userDoc = await getDoc(doc(db, 'users', fbUser.uid));
+        if (userDoc.exists()) {
+          setUser(userDoc.data() as User);
+        }
+      } else {
+        setUser(null);
+        setFirebaseUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const login = async (email: string, password: string) => {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-    if (!res.ok) throw new Error('Login failed');
-    const data = await res.json();
-    setUser(data.user);
-    setToken(data.token);
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
+    const { signInWithEmailAndPassword } = await import('firebase/auth');
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    const userDoc = await getDoc(doc(db, 'users', result.user.uid));
+    if (userDoc.exists()) {
+      setUser(userDoc.data() as User);
+    }
   };
 
   const register = async (email: string, username: string, password: string) => {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, username, password }),
-    });
-    if (!res.ok) throw new Error('Registration failed');
-    const data = await res.json();
-    setUser(data.user);
-    setToken(data.token);
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
+    const { createUserWithEmailAndPassword, updateProfile } = await import('firebase/auth');
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(result.user, { displayName: username });
+    
+    const userData: User = {
+      uid: result.user.uid,
+      email: result.user.email,
+      username,
+      avatar: null,
+    };
+    
+    await setDoc(doc(db, 'users', result.user.uid), userData);
+    setUser(userData);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    const { signOut } = await import('firebase/auth');
+    await signOut(auth);
     setUser(null);
-    setToken(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    setFirebaseUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, firebaseUser, login, register, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

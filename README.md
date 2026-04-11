@@ -1,144 +1,92 @@
 # Messenger App
 
-A real-time messaging application built with Next.js, Express, Socket.io, and PostgreSQL.
+A real-time messaging application built with Next.js and Firebase.
 
 ## Features
 
-- Real-time messaging with Socket.io
-- User authentication (JWT)
+- Real-time messaging with Firebase Firestore
+- User authentication (Firebase Auth)
 - Direct and group conversations
-- File and image attachments
-- Typing indicators
-- Online/offline status
+- File and image attachments (Firebase Storage)
+- Real-time updates
 
-## Project Structure
+## Quick Setup
 
-```
-├── app/                    # Next.js frontend
-│   ├── (auth)/            # Auth pages (login, register)
-│   ├── (chat)/            # Chat pages
-│   ├── lib/               # Auth and socket utilities
-│   └── components/        # React components
-└── server/                # Express backend
-    ├── prisma/            # Database schema
-    ├── src/
-    │   ├── routes/       # API routes
-    │   ├── middleware/    # Auth middleware
-    │   ├── socket/        # Socket.io handlers
-    │   └── types/         # TypeScript types
-    └── uploads/          # File attachments
-```
+### 1. Create Firebase Project
 
-## Setup
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Create a new project
+3. **Authentication**: Enable "Email/Password" provider
+4. **Firestore Database**: Create database in test mode
+5. **Storage**: Enable storage in test mode
 
-### Prerequisites
+### 2. Get Firebase Config
 
-- Node.js 20+
-- PostgreSQL database
-- Fly.io account (for deployment)
+1. Go to Project Settings > General > Your apps > Web app
+2. Copy the config values
 
-### Local Development
+### 3. Add Environment Variables
 
-1. **Database Setup**
+Create `.env.local` in project root:
 
 ```bash
-# Create PostgreSQL database
-createdb messenger_db
-
-# Update DATABASE_URL in server/.env
+NEXT_PUBLIC_FIREBASE_API_KEY=your-key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
+NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abcdef
 ```
 
-2. **Backend**
+### 4. Set Firestore Rules
+
+Go to Firestore > Rules:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /conversations/{conversationId} {
+      allow read, write: if request.auth != null;
+    }
+    match /messages/{messageId} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+```
+
+### 5. Set Storage Rules
+
+Go to Storage > Rules:
+
+```
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+```
+
+### 6. Run Locally
 
 ```bash
-cd server
 npm install
-npx prisma generate
-npx prisma db push
 npm run dev
 ```
 
-3. **Frontend**
+## Deploy to Vercel
 
-```bash
-npm install
-npm run dev
-```
+1. Push code to GitHub
+2. Import project in Vercel
+3. Add Firebase environment variables in Vercel dashboard
+4. Deploy!
 
-4. **Environment Variables**
-
-Copy `.env.example` to `.env.local` and `.env` in the respective directories.
-
-## Deployment to Fly.io
-
-### 1. Set up PostgreSQL on Fly.io
-
-```bash
-fly postgres create --name messenger-db
-fly postgres attach --app messenger-server messenger-db
-```
-
-### 2. Deploy Backend
-
-```bash
-cd server
-
-# Set secrets
-fly secrets set JWT_SECRET="your-secret-key"
-fly secrets set DATABASE_URL="postgresql://..."
-
-# Deploy
-fly deploy
-```
-
-### 3. Deploy Frontend
-
-Update `NEXT_PUBLIC_API_URL` in `.env` with your backend URL:
-
-```bash
-# In root directory
-fly secrets set NEXT_PUBLIC_API_URL="https://messenger-server.fly.dev"
-
-fly deploy
-```
-
-### Or use the deploy script
-
-```bash
-cd server
-./deploy.sh
-```
-
-## API Endpoints
-
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login user
-- `GET /api/auth/me` - Get current user
-
-### Conversations
-- `GET /api/conversations` - List user conversations
-- `POST /api/conversations` - Create conversation
-- `GET /api/conversations/:id` - Get conversation details
-- `POST /api/conversations/:id/participants` - Add participants
-
-### Messages
-- `GET /api/messages/:conversationId` - Get messages
-- `POST /api/messages` - Send message
-- `POST /api/messages/upload` - Upload file
-- `GET /api/messages/users/search?q=` - Search users
-
-## Socket.io Events
-
-### Client → Server
-- `joinConversation` - Join a conversation room
-- `leaveConversation` - Leave a conversation room
-- `sendMessage` - Send a message
-- `typing` - User is typing
-- `stopTyping` - User stopped typing
-
-### Server → Client
-- `message` - New message received
-- `typing` - User is typing
-- `userOnline` - User came online
-- `userOffline` - User went offline
+**Important:** Don't forget to add all `NEXT_PUBLIC_FIREBASE_*` variables in Vercel.
