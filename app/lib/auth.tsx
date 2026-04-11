@@ -1,9 +1,9 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User as FirebaseUser } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth';
+import { doc, setDoc, getDoc, getFirestore } from 'firebase/firestore';
+import { auth } from './firebase';
 
 interface User {
   uid: string;
@@ -14,7 +14,6 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  firebaseUser: FirebaseUser | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -25,20 +24,25 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (fbUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       if (fbUser) {
-        setFirebaseUser(fbUser);
+        const db = getFirestore();
         const userDoc = await getDoc(doc(db, 'users', fbUser.uid));
         if (userDoc.exists()) {
           setUser(userDoc.data() as User);
+        } else {
+          setUser({
+            uid: fbUser.uid,
+            email: fbUser.email,
+            username: fbUser.displayName || 'User',
+            avatar: fbUser.photoURL,
+          });
         }
       } else {
         setUser(null);
-        setFirebaseUser(null);
       }
       setLoading(false);
     });
@@ -47,16 +51,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const { signInWithEmailAndPassword } = await import('firebase/auth');
+    const db = getFirestore();
     const result = await signInWithEmailAndPassword(auth, email, password);
     const userDoc = await getDoc(doc(db, 'users', result.user.uid));
     if (userDoc.exists()) {
       setUser(userDoc.data() as User);
+    } else {
+      setUser({
+        uid: result.user.uid,
+        email: result.user.email,
+        username: result.user.displayName || 'User',
+        avatar: result.user.photoURL,
+      });
     }
   };
 
   const register = async (email: string, username: string, password: string) => {
-    const { createUserWithEmailAndPassword, updateProfile } = await import('firebase/auth');
+    const db = getFirestore();
     const result = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(result.user, { displayName: username });
     
@@ -72,14 +83,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    const { signOut } = await import('firebase/auth');
     await signOut(auth);
     setUser(null);
-    setFirebaseUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, firebaseUser, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

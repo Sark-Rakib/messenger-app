@@ -26,7 +26,7 @@ export default function LoginPage() {
     try {
       await login(email, password);
       router.push('/chat');
-    } catch {
+    } catch (err: unknown) {
       setError('Invalid email or password');
     } finally {
       setLoading(false);

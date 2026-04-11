@@ -12,16 +12,6 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-console.log("API KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
-console.log("AUTH DOMAIN:", process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN);
-console.log("PROJECT ID:", process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
-console.log("STORAGE BUCKET:", process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET);
-console.log(
-  "MESSAGING SENDER ID:",
-  process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-);
-console.log("APP ID:", process.env.NEXT_PUBLIC_FIREBASE_APP_ID);
-
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
