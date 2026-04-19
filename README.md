@@ -4,6 +4,10 @@ A real-time messaging application built with Next.js and Supabase.
 
 ## Features
 
+# Live Link : https://chatify-bd.vercel.app/auth/login
+
+## Features
+
 - **Real-time Messaging** - Instant message delivery using Supabase Realtime
 - **User Authentication** - Secure login/register with Supabase Auth
 - **Image Sharing** - Send and receive images in chats
