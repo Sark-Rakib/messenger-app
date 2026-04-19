@@ -208,17 +208,17 @@ export default function ChatPage() {
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
       <div
-        className={`w-full md:w-96 bg-white border-r flex flex-col ${
+        className={`w-full md:w-96 bg-white border-r border-gray-200 flex flex-col ${
           showMobileChat ? "hidden md:flex" : "flex"
         }`}
       >
         {/* Header */}
-        <div className="p-4 border-b">
+        <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-xl font-bold text-gray-800">Messages</h1>
             <button
               onClick={handleLogout}
-              className="text-sm text-gray-500 hover:text-red-500 transition"
+              className="text-sm bg-red-400 p-2 rounded hover:text-red-500 transition"
             >
               Logout
             </button>
@@ -258,7 +258,7 @@ export default function ChatPage() {
                 onClick={() =>
                   conv.user_data && handleSelectUser(conv.user_data)
                 }
-                className={`w-full p-4 flex items-center gap-3 hover:bg-gray-50 border-b transition ${
+                className={`w-full p-4 flex items-center gap-3 hover:bg-gray-50 border-b border-gray-200 transition ${
                   selectedUser?.id === conv.user_data?.id ? "bg-blue-50" : ""
                 }`}
               >
@@ -302,7 +302,7 @@ export default function ChatPage() {
         </div>
 
         {/* Current User */}
-        <div className="p-4 border-t bg-gray-50">
+        <div className="p-4 border-t border-gray-200 bg-gray-50">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-linear-to-br from-green-500 to-teal-600 flex items-center justify-center text-white font-bold text-lg overflow-hidden">
               {user.avatar_url ? (
@@ -357,7 +357,7 @@ export default function ChatPage() {
       {showUserList && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white w-full max-w-lg mx-4 rounded-2xl overflow-hidden">
-            <div className="p-4 border-b">
+            <div className="p-4 border-b border-gray-200">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold">New Message</h2>
                 <button
@@ -486,7 +486,7 @@ export default function ChatPage() {
         {selectedUser ? (
           <>
             {/* Chat Header */}
-            <div className="p-3 border-b bg-white flex items-center gap-3">
+            <div className="p-3 border-b border-gray-200 bg-white flex items-center gap-3">
               <button
                 onClick={() => setShowMobileChat(false)}
                 className="md:hidden text-gray-500 text-2xl"
@@ -684,10 +684,7 @@ export default function ChatPage() {
               })()}
 
             {/* Message Input */}
-            <form
-              onSubmit={handleSendMessage}
-              className="px-2 py-3 border-t bg-white"
-            >
+            <form onSubmit={handleSendMessage} className="px-2 py-4 bg-white">
               <div className="flex items-center gap-2">
                 <input
                   type="file"
