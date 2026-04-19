@@ -722,7 +722,7 @@ export default function ChatPage() {
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
                   placeholder="Type a message..."
-                  className="flex-1 px-3 py-3 mr-5 border border-gray-400 rounded-full focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="flex-1 px-4 py-3 mr-5 border border-gray-400 rounded-full focus:ring-2 focus:ring-blue-500 outline-none"
                 />
                 <button
                   type="submit"
