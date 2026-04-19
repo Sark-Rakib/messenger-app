@@ -218,7 +218,7 @@ export default function ChatPage() {
             <h1 className="text-xl font-bold text-gray-800">Messages</h1>
             <button
               onClick={handleLogout}
-              className="text-sm bg-red-400 p-2 rounded hover:text-red-500 transition"
+              className="text-sm bg-red-400 py-1 px-2 md:p-2 rounded hover:text-red-500 transition"
             >
               Logout
             </button>
@@ -684,7 +684,7 @@ export default function ChatPage() {
               })()}
 
             {/* Message Input */}
-            <form onSubmit={handleSendMessage} className="px-2 py-4 bg-white">
+            <form onSubmit={handleSendMessage} className="px-1 py-2 bg-white">
               <div className="flex items-center gap-2">
                 <input
                   type="file"
@@ -697,7 +697,7 @@ export default function ChatPage() {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={sendingImage}
-                  className="p-3 hover:bg-gray-100 rounded-full transition"
+                  className="p-3  hover:bg-gray-100 rounded-full transition"
                 >
                   {sendingImage ? (
                     <div className="w-6 h-6 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
@@ -722,12 +722,12 @@ export default function ChatPage() {
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
                   placeholder="Type a message..."
-                  className="flex-1 px-4 py-3 border rounded-full focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="flex-1 px-4 py-3 mr-5 border rounded-full focus:ring-2 focus:ring-blue-500 outline-none"
                 />
                 <button
                   type="submit"
                   disabled={!messageText.trim()}
-                  className="p-3 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 transition"
+                  className="p-3 -ml-3 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 transition"
                 >
                   <svg
                     className="w-6 h-6"
