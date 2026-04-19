@@ -35,6 +35,7 @@ export interface Message {
   text: string | null;
   image_url: string | null;
   created_at: string;
+  edited?: boolean;
   sender?: User;
 }
 

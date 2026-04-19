@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS public.messages (
   sender_id UUID REFERENCES public.users ON DELETE CASCADE NOT NULL,
   text TEXT,
   image_url TEXT,
+  edited BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -72,6 +73,12 @@ CREATE POLICY "Users can insert messages in their conversations" ON public.messa
       WHERE id = conversation_id AND auth.uid() = ANY(participants)
     )
   );
+
+CREATE POLICY "Users can update own messages" ON public.messages
+  FOR UPDATE USING (auth.uid() = sender_id);
+
+CREATE POLICY "Users can delete own messages" ON public.messages
+  FOR DELETE USING (auth.uid() = sender_id);
 
 -- Enable realtime for messages
 ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;

@@ -61,7 +61,7 @@ export function useConversations() {
               if (otherUserId) {
                 const { data: userData } = await supabase
                   .from("users")
-                  .select("*")
+                  .select("id, username, avatar_url, is_online, last_seen")
                   .eq("id", otherUserId)
                   .single();
                 return { ...conv, user_data: userData };
@@ -114,6 +114,11 @@ export function useMessages(conversationId: string | null) {
       return;
     }
 
+    if (typeof window === "undefined") {
+      setLoading(false);
+      return;
+    }
+
     let channel: any = null;
 
     const fetchMessages = async () => {
@@ -143,35 +148,55 @@ export function useMessages(conversationId: string | null) {
     const setupRealtime = async () => {
       const supabase = await getSupabase();
 
-      channel = supabase
-        .channel(`messages_${conversationId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "messages",
-            filter: `conversation_id=eq.${conversationId}`,
-          },
-          async (payload: any) => {
-            const { data: newMessage } = await supabase
-              .from("messages")
-              .select(`*, sender:users(*)`)
-              .eq("id", payload.new.id)
-              .single();
+      console.log("Setting up realtime for conversation:", conversationId);
 
+      channel = supabase.channel(`chat-${conversationId}`);
+
+      channel.on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` }, (payload: any) => {
+        console.log("INSERT received:", payload);
+        const newRecord = payload.new;
+        if (newRecord && newRecord.conversation_id === conversationId) {
+          supabase.from("messages").select(`*, sender:users(*)`).eq("id", newRecord.id).single().then(({ data: newMessage }: any) => {
             if (newMessage) {
-              setMessages((prev) => [...prev, newMessage]);
+              setMessages((prev: any) => [...prev, newMessage]);
             }
-          },
-        )
-        .subscribe();
+          });
+        }
+      });
+
+      channel.on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` }, (payload: any) => {
+        console.log("UPDATE received:", payload);
+        const newRecord = payload.new;
+        if (newRecord && newRecord.conversation_id === conversationId) {
+          supabase.from("messages").select(`*, sender:users(*)`).eq("id", newRecord.id).single().then(({ data: updatedMessage }: any) => {
+            if (updatedMessage) {
+              setMessages((prev: any) => prev.map((m: any) => (m.id === updatedMessage.id ? updatedMessage : m)));
+            }
+          });
+        }
+      });
+
+      channel.on("postgres_changes", { event: "DELETE", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` }, (payload: any) => {
+        console.log("DELETE received:", payload);
+        const oldRecord = payload.old;
+        if (oldRecord) {
+          setMessages((prev: any) => prev.filter((m: any) => m.id !== oldRecord.id));
+        }
+      });
+
+      await channel.subscribe((status: any) => {
+        console.log("Subscription status:", status);
+      });
     };
 
     setupRealtime();
 
     return () => {
-      if (channel && supabaseInstance) supabaseInstance.removeChannel(channel);
+      if (channel) {
+        getSupabase().then((supabase) => {
+          supabase.removeChannel(channel);
+        }).catch(console.error);
+      }
     };
   }, [conversationId]);
 
@@ -205,7 +230,7 @@ export function useMessages(conversationId: string | null) {
     [conversationId, user],
   );
 
-  return { messages, loading, sendMessage };
+  return { messages, loading, sendMessage, setMessages };
 }
 
 export function useUsers() {
@@ -320,4 +345,63 @@ export async function uploadImage(file: File): Promise<string> {
     .getPublicUrl(filePath);
 
   return data.publicUrl;
+}
+
+export async function uploadProfileImage(file: File, userId: string): Promise<string> {
+  const supabase = await getSupabase();
+
+  const fileExt = file.name.split(".").pop();
+  const fileName = `${userId}_${Date.now()}.${fileExt}`;
+  const filePath = `avatars/${fileName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("message-images")
+    .upload(filePath, file);
+
+  if (uploadError) throw uploadError;
+
+  const { data } = supabase.storage
+    .from("message-images")
+    .getPublicUrl(filePath);
+
+  return data.publicUrl;
+}
+
+export async function updateProfile(userId: string, updates: { username?: string; avatar_url?: string }) {
+  const supabase = await getSupabase();
+  
+  await supabase
+    .from("users")
+    .update(updates)
+    .eq("id", userId);
+}
+
+export async function editMessage(messageId: string, newText: string) {
+  console.log("Editing message:", messageId, newText);
+  const supabase = await getSupabase();
+  
+  const { error } = await supabase
+    .from("messages")
+    .update({ text: newText, edited: true })
+    .eq("id", messageId);
+
+  if (error) {
+    console.error("Edit error:", error);
+    throw error;
+  }
+}
+
+export async function deleteMessage(messageId: string) {
+  console.log("Deleting message:", messageId);
+  const supabase = await getSupabase();
+  
+  const { error } = await supabase
+    .from("messages")
+    .delete()
+    .eq("id", messageId);
+
+  if (error) {
+    console.error("Delete error:", error);
+    throw error;
+  }
 }

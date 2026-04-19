@@ -1,92 +1,72 @@
-# Messenger App
+# Messenger App (Chatify)
 
-A real-time messaging application built with Next.js and Firebase.
+A real-time messaging application built with Next.js and Supabase.
 
 ## Features
 
-- Real-time messaging with Firebase Firestore
-- User authentication (Firebase Auth)
-- Direct and group conversations
-- File and image attachments (Firebase Storage)
-- Real-time updates
+- **Real-time Messaging** - Instant message delivery using Supabase Realtime
+- **User Authentication** - Secure login/register with Supabase Auth
+- **Image Sharing** - Send and receive images in chats
+- **Profile Management** - Edit username and profile picture
+- **Edit & Delete Messages** - Edit text messages, delete text or images
+- **Online Status** - See when users are online/offline
+- **Responsive Design** - Works on mobile, tablet, and laptop
+
+## Tech Stack
+
+- **Frontend**: Next.js 16, React 19, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL, Auth, Storage, Realtime)
+- **Deployment**: Vercel
 
 ## Quick Setup
 
-### 1. Create Firebase Project
+### 1. Create Supabase Project
 
-1. Go to [Firebase Console](https://console.firebase.google.com/)
+1. Go to [Supabase](https://supabase.com/)
 2. Create a new project
-3. **Authentication**: Enable "Email/Password" provider
-4. **Firestore Database**: Create database in test mode
-5. **Storage**: Enable storage in test mode
+3. Note your `Project URL` and `anon key`
 
-### 2. Get Firebase Config
+### 2. Setup Database
 
-1. Go to Project Settings > General > Your apps > Web app
-2. Copy the config values
+Run the SQL from `supabase/schema.sql` in the Supabase SQL Editor to create tables and policies.
 
-### 3. Add Environment Variables
+### 3. Setup Storage
+
+1. Go to Supabase Dashboard → Storage
+2. Create a new bucket named `message-images`
+3. Add policy to allow public read access
+
+### 4. Add Environment Variables
 
 Create `.env.local` in project root:
 
 ```bash
-NEXT_PUBLIC_FIREBASE_API_KEY=your-key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
-NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abcdef
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-### 4. Set Firestore Rules
-
-Go to Firestore > Rules:
-
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-    match /conversations/{conversationId} {
-      allow read, write: if request.auth != null;
-    }
-    match /messages/{messageId} {
-      allow read, write: if request.auth != null;
-    }
-  }
-}
-```
-
-### 5. Set Storage Rules
-
-Go to Storage > Rules:
-
-```
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write: if request.auth != null;
-    }
-  }
-}
-```
-
-### 6. Run Locally
+### 5. Run Locally
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Deploy to Vercel
+## Deployment
+
+### Deploy to Vercel
 
 1. Push code to GitHub
 2. Import project in Vercel
-3. Add Firebase environment variables in Vercel dashboard
+3. Add environment variables in Vercel dashboard:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 4. Deploy!
 
-**Important:** Don't forget to add all `NEXT_PUBLIC_FIREBASE_*` variables in Vercel.
+## Usage
+
+1. **Register/Login** - Create an account or sign in
+2. **Start Conversation** - Click "New Message" to find users
+3. **Send Messages** - Type text or click the image icon to send images
+4. **Edit/Delete** - Hover (desktop) or long-press (mobile) on your messages
+5. **Edit Profile** - Click the gear icon in sidebar to change name or photo
