@@ -697,10 +697,10 @@ export default function ChatPage() {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={sendingImage}
-                  className="p-3  hover:bg-gray-100 rounded-full transition"
+                  className="p-2 hover:bg-gray-100 rounded-full transition"
                 >
                   {sendingImage ? (
-                    <div className="w-6 h-6 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+                    <div className="w-6 h-6 border border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
                   ) : (
                     <svg
                       className="w-6 h-6 text-gray-500"
@@ -722,7 +722,7 @@ export default function ChatPage() {
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
                   placeholder="Type a message..."
-                  className="flex-1 px-4 py-3 mr-5 border rounded-full focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="flex-1 px-3 py-3 mr-5 border border-gray-400 rounded-full focus:ring-2 focus:ring-blue-500 outline-none"
                 />
                 <button
                   type="submit"
